@@ -4,23 +4,49 @@ info:
   title: Dynamics D365 Business Central - NBS Integration API
   description: Clean API specification for NBS Business Central integration
 servers:
-  - url: https://api.businesscentral.dynamics.com/v2.0/{Tenant Id}/{Environment}/api/nbs/nbsIntegration/v2.0/companies({Company Id})
+  - url: https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/api/nbs/nbsIntegration/v2.0/companies({companyId})
     variables:
-      "Tenant Id":
+      "tenantId":
         default: your-tenant-id
         description: The tenant ID for your Business Central environment
-      "Environment":
+      "environment":
         default: Sandbox
         description: The environment type (e.g., Sandbox or Production)
-      "Company Id":
+      "companyId":
         default: your-company-id
         description: The unique identifier (GUID) of the company
     description: NBS Integration API v2.0
+  - url: https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/api/v2.0
+    variables:
+      "tenantId":
+        default: your-tenant-id
+        description: The tenant ID for your Business Central environment.
+      "environment":
+        default: Sandbox
+        description: The environment type (e.g., Sandbox or Production).
+    description: Default Miscrosoft API v1.0
 
 security:
   - oAuth: [Financials.ReadWrite.All]
 
 paths:
+  # ============= COMPANIES =============
+  /companies:
+    get:
+      tags:
+        - company
+      summary: Get list of companies
+      operationId: listCompanies
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved collection of companies
   # ============= ACCOUNTS =============
   /accounts:
     get:
@@ -1379,6 +1405,8 @@ components:
             $ref: '#/components/schemas/dimensionSetLine'
 
 tags:
+  - name: company
+    description: Company operations
   - name: account
     description: G/L Account operations
   - name: generalLedgerEntry
