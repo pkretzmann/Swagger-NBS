@@ -4,7 +4,7 @@ const port = 3100;
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 
-const swaggerDocument = YAML.load('./MSAPI/MicrosoftAPIv1.0.yaml'); 
+const swaggerDocument = YAML.load('./MicrosoftAPIv1.0.yaml'); 
 
 var options = { };
 app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));

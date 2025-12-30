@@ -4,7 +4,7 @@ info:
  title: (v1.0) Dynamics 365 Business Central
  description: (v1.0) Business Central Standard APIs
 servers:
- - url: https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/api/v1.0
+ - url: https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/api/v2.0
    variables:
     tenantId:
      default: your-tenant-id
@@ -12,7 +12,7 @@ servers:
     environment:
      default: Sandbox
      description: The environment type (e.g., Sandbox or Production).
-   description: Default Miscrosoft API v1.0
+   description: Default Miscrosoft API v2.0
    
 paths:
  "/companies":
