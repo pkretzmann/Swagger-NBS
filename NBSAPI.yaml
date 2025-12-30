@@ -1,0 +1,1395 @@
+openapi: '3.0.0'
+info:
+  version: 1.0.0
+  title: Dynamics D365 Business Central - NBS Integration API
+  description: Clean API specification for NBS Business Central integration
+servers:
+  - url: https://api.businesscentral.dynamics.com/v2.0/{Tenant Id}/{Environment}/api/nbs/nbsIntegration/v2.0/companies({Company Id})
+    variables:
+      "Tenant Id":
+        default: your-tenant-id
+        description: The tenant ID for your Business Central environment
+      "Environment":
+        default: Sandbox
+        description: The environment type (e.g., Sandbox or Production)
+      "Company Id":
+        default: your-company-id
+        description: The unique identifier (GUID) of the company
+    description: NBS Integration API v2.0
+
+security:
+  - oAuth: [Financials.ReadWrite.All]
+
+paths:
+  # ============= ACCOUNTS =============
+  /accounts:
+    get:
+      tags:
+        - account
+      summary: Get list of accounts
+      operationId: listAccounts
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved collection of accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/accountCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/accounts({id})':
+    get:
+      tags:
+        - account
+      summary: Get account by ID
+      operationId: getAccount
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account'
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= GENERAL LEDGER ENTRIES =============
+  /generalLedgerEntries:
+    get:
+      tags:
+        - generalLedgerEntry
+      summary: Get list of general ledger entries
+      operationId: listGeneralLedgerEntries
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved collection of general ledger entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generalLedgerEntryCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/generalLedgerEntries({id})':
+    get:
+      tags:
+        - generalLedgerEntry
+      summary: Get general ledger entry by ID
+      operationId: getGeneralLedgerEntry
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved general ledger entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generalLedgerEntry'
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= TRIAL BALANCE ENTRIES =============
+  # Page-based API (NBSAPITrialBalance.Page.al) using temporary buffer table
+  # Data is aggregated from G/L entries grouped by account and dimension set
+  /trialBalanceEntries:
+    get:
+      tags:
+        - trialBalanceEntry
+      summary: Get trial balance entries (aggregated by account and dimension set)
+      description: |
+        Page-based API that returns aggregated trial balance data.
+        Data is grouped by G/L Account number and Dimension Set ID.
+        Use $expand=dimensionSetLines to get dimension details for each entry.
+      operationId: listTrialBalanceEntries
+      parameters:
+        - name: $filter
+          in: query
+          description: |
+            Filter the results using OData query syntax.
+
+            **Date filtering (cumulative balance up to date):**
+
+                $filter=dateFilter eq '2024-12-31'
+
+            **Filter by account:**
+
+                $filter=accountNumber eq '1000'
+
+            **Combined filters:**
+
+                $filter=accountNumber eq '1000' and dateFilter eq '2024-12-31'
+
+            - Date format is 'YYYY-MM-DD' (quotes needed)
+            - dateFilter returns cumulative balances from beginning up to and including the specified date
+            - If no dateFilter is specified, returns balances for all time
+
+          schema:
+            type: string
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+        - name: $expand
+          in: query
+          description: |
+            Expand related entities. Use `dimensionSetLines` to include dimension values for each entry.
+
+            Example: `$expand=dimensionSetLines`
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Retrieved collection of trial balance entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/trialBalanceEntryCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= JOURNALS =============
+  /journals:
+    get:
+      tags:
+        - journal
+      summary: Get list of journals
+      operationId: listJournals
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved collection of journals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+    post:
+      tags:
+        - journal
+      summary: Create a new journal
+      operationId: createJournal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/journal'
+      responses:
+        '201':
+          description: Created journal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journal'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/journals({id})':
+    get:
+      tags:
+        - journal
+      summary: Get journal by ID
+      operationId: getJournal
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved journal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journal'
+        default:
+          $ref: '#/components/responses/error'
+    patch:
+      tags:
+        - journal
+      summary: Update journal
+      operationId: updateJournal
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/journal'
+      responses:
+        '200':
+          description: Updated journal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journal'
+        default:
+          $ref: '#/components/responses/error'
+    delete:
+      tags:
+        - journal
+      summary: Delete journal
+      operationId: deleteJournal
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      responses:
+        '204':
+          description: Successfully deleted
+        default:
+          $ref: '#/components/responses/error'
+
+  # Journal Lines under Journals (one level of nesting)
+  '/journals({id})/journalLines':
+    get:
+      tags:
+        - journalLine
+      summary: Get journal lines for a journal
+      operationId: listJournalLinesForJournal
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved collection of journal lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLineCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+    post:
+      tags:
+        - journalLine
+      summary: Create a new journal line
+      operationId: createJournalLineForJournal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/journalLine'
+      responses:
+        '201':
+          description: Created journal line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLine'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/journals({id})/journalLines({lineId})':
+    get:
+      tags:
+        - journalLine
+      summary: Get journal line by ID
+      operationId: getJournalLineForJournal
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/lineId'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved journal line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLine'
+        default:
+          $ref: '#/components/responses/error'
+    patch:
+      tags:
+        - journalLine
+      summary: Update journal line
+      operationId: updateJournalLineForJournal
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/journalLine'
+      responses:
+        '200':
+          description: Updated journal line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLine'
+        default:
+          $ref: '#/components/responses/error'
+    delete:
+      tags:
+        - journalLine
+      summary: Delete journal line
+      operationId: deleteJournalLineForJournal
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      responses:
+        '204':
+          description: Successfully deleted
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= JOURNAL LINES (top-level) =============
+  /journalLines:
+    get:
+      tags:
+        - journalLine
+      summary: Get list of all journal lines
+      operationId: listJournalLines
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved collection of journal lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLineCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/journalLines({id})':
+    get:
+      tags:
+        - journalLine
+      summary: Get journal line by ID
+      operationId: getJournalLine
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/expand'
+      responses:
+        '200':
+          description: Retrieved journal line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/journalLine'
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= ATTACHMENTS =============
+  /attachments:
+    get:
+      tags:
+        - attachment
+      summary: Get list of attachments
+      operationId: listAttachments
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved collection of attachments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/attachmentCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+    post:
+      tags:
+        - attachment
+      summary: Create a new attachment
+      operationId: createAttachment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/attachment'
+      responses:
+        '201':
+          description: Created attachment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/attachment'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/attachments({id})':
+    get:
+      tags:
+        - attachment
+      summary: Get attachment by ID
+      operationId: getAttachment
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved attachment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/attachment'
+        default:
+          $ref: '#/components/responses/error'
+    patch:
+      tags:
+        - attachment
+      summary: Update attachment
+      operationId: updateAttachment
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/attachment'
+      responses:
+        '200':
+          description: Updated attachment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/attachment'
+        default:
+          $ref: '#/components/responses/error'
+    delete:
+      tags:
+        - attachment
+      summary: Delete attachment
+      operationId: deleteAttachment
+      parameters:
+        - $ref: '#/components/parameters/ifMatch'
+      responses:
+        '204':
+          description: Successfully deleted
+        default:
+          $ref: '#/components/responses/error'
+
+  '/attachments({id})/attachmentContent':
+    get:
+      tags:
+        - attachment
+      summary: Get attachment content
+      operationId: getAttachmentContent
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+      responses:
+        '200':
+          description: Retrieved attachment content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/error'
+    put:
+      tags:
+        - attachment
+      summary: Upload attachment content
+      operationId: updateAttachmentContent
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Successfully uploaded
+        default:
+          $ref: '#/components/responses/error'
+
+  # ============= DIMENSION SET LINES =============
+  /dimensionSetLines:
+    get:
+      tags:
+        - dimensionSetLine
+      summary: Get list of dimension set lines
+      operationId: listDimensionSetLines
+      parameters:
+        - $ref: '#/components/parameters/top'
+        - $ref: '#/components/parameters/skip'
+        - $ref: '#/components/parameters/filter'
+        - $ref: '#/components/parameters/count'
+        - $ref: '#/components/parameters/orderby'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved collection of dimension set lines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dimensionSetLineCollectionResponse'
+        default:
+          $ref: '#/components/responses/error'
+
+  '/dimensionSetLines({id})':
+    get:
+      tags:
+        - dimensionSetLine
+      summary: Get dimension set line by ID
+      operationId: getDimensionSetLine
+      parameters:
+        - $ref: '#/components/parameters/entityId'
+        - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: Retrieved dimension set line
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dimensionSetLine'
+        default:
+          $ref: '#/components/responses/error'
+
+components:
+  securitySchemes:
+    oAuth:
+      type: oauth2
+      description: OAuth 2.0 authentication for Business Central API
+      flows:
+        implicit:
+          authorizationUrl: https://login.windows.net/common/oauth2/authorize?resource=https://api.businesscentral.dynamics.com
+          scopes:
+            Financials.ReadWrite.All: Full access to financials
+
+  parameters:
+    companyId:
+      name: id
+      in: path
+      required: true
+      description: The unique identifier of company
+      schema:
+        type: string
+        format: uuid
+
+    entityId:
+      name: id
+      in: path
+      required: true
+      description: The unique identifier of the entity
+      schema:
+        type: string
+        format: uuid
+
+    lineId:
+      name: lineId
+      in: path
+      required: true
+      description: The unique identifier of the journal line
+      schema:
+        type: string
+        format: uuid
+
+    top:
+      name: $top
+      in: query
+      description: Show only the first n items
+      schema:
+        type: integer
+        minimum: 0
+
+    skip:
+      name: $skip
+      in: query
+      description: Skip the first n items
+      schema:
+        type: integer
+        minimum: 0
+
+    filter:
+      name: $filter
+      in: query
+      description: Filter items by property values
+      schema:
+        type: string
+
+    count:
+      name: $count
+      in: query
+      description: Include count of items
+      schema:
+        type: boolean
+
+    orderby:
+      name: $orderby
+      in: query
+      description: Order items by property values
+      schema:
+        type: array
+        items:
+          type: string
+      explode: false
+
+    select:
+      name: $select
+      in: query
+      description: Select properties to be returned
+      schema:
+        type: array
+        items:
+          type: string
+      explode: false
+
+    expand:
+      name: $expand
+      in: query
+      description: Expand related entities
+      schema:
+        type: array
+        items:
+          type: string
+      explode: false
+
+    ifMatch:
+      name: If-Match
+      in: header
+      description: ETag for optimistic concurrency
+      schema:
+        type: string
+
+  responses:
+    error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ODataError'
+
+  schemas:
+    # ============= ERROR SCHEMAS =============
+    ODataError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/MainError'
+
+    MainError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        target:
+          type: string
+          nullable: true
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetails'
+        innerError:
+          type: object
+          description: Service-specific error details
+
+    ErrorDetails:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        target:
+          type: string
+          nullable: true
+
+    # ============= ENTITY SCHEMAS =============
+    company:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        systemVersion:
+          type: string
+          nullable: true
+        timestamp:
+          type: integer
+          format: int64
+          nullable: true
+        name:
+          type: string
+          maxLength: 30
+          nullable: true
+        displayName:
+          type: string
+          maxLength: 250
+          nullable: true
+        businessProfileId:
+          type: string
+          maxLength: 250
+          nullable: true
+        systemCreatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        systemCreatedBy:
+          type: string
+          format: uuid
+          nullable: true
+        systemModifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        systemModifiedBy:
+          type: string
+          format: uuid
+          nullable: true
+
+    account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+          maxLength: 20
+        displayName:
+          type: string
+          maxLength: 100
+          nullable: true
+        category:
+          $ref: '#/components/schemas/glAccountCategory'
+        subCategory:
+          type: string
+          maxLength: 80
+          nullable: true
+        blocked:
+          type: boolean
+          nullable: true
+        accountType:
+          $ref: '#/components/schemas/glAccountType'
+        directPosting:
+          type: boolean
+          nullable: true
+        rescontro:
+          type: boolean
+          nullable: true
+        netChange:
+          type: number
+          format: decimal
+          nullable: true
+        balance:
+          type: number
+          format: decimal
+          nullable: true
+        balanceAtDate:
+          type: number
+          format: decimal
+          nullable: true
+        consolidationTranslationMethod:
+          type: string
+          nullable: true
+        consolidationDebitAccount:
+          type: string
+          maxLength: 20
+          nullable: true
+        consolidationCreditAccount:
+          type: string
+          maxLength: 20
+          nullable: true
+        excludeFromConsolidation:
+          type: boolean
+          nullable: true
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        rowVersion:
+          type: integer
+          format: int64
+          nullable: true
+
+    generalLedgerEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entryNumber:
+          type: integer
+          format: int32
+          nullable: true
+        postingDate:
+          type: string
+          format: date
+          nullable: true
+        documentNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        documentType:
+          $ref: '#/components/schemas/genJournalDocumentType'
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        accountNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        description:
+          type: string
+          maxLength: 100
+          nullable: true
+        debitAmount:
+          type: number
+          format: decimal
+          nullable: true
+        creditAmount:
+          type: number
+          format: decimal
+          nullable: true
+        additionalCurrencyDebitAmount:
+          type: number
+          format: decimal
+          nullable: true
+        additionalCurrencyCreditAmount:
+          type: number
+          format: decimal
+          nullable: true
+        externalDocumentNumber:
+          type: string
+          maxLength: 35
+          nullable: true
+        transactionNo:
+          type: integer
+          format: int32
+          nullable: true
+        sourceType:
+          $ref: '#/components/schemas/genJournalSourceType'
+        sourceNo:
+          type: string
+          maxLength: 20
+          nullable: true
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        rowVersion:
+          type: integer
+          format: int64
+          nullable: true
+
+    trialBalanceEntry:
+      type: object
+      description: |
+        Aggregated trial balance entry from page-based API (NBSAPITrialBalance.Page.al).
+        Each entry represents a unique combination of G/L Account and Dimension Set ID.
+        Use $expand=dimensionSetLines to get dimension details.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: System ID (GUID) for the entry
+        accountNumber:
+          type: string
+          maxLength: 20
+          description: G/L Account number
+        accountName:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: G/L Account name
+        dateFilter:
+          type: string
+          format: date
+          nullable: true
+          description: Date filter applied for cumulative balance calculation
+        dimensionSetId:
+          type: integer
+          format: int32
+          description: Dimension Set ID (0 = no dimensions assigned)
+        debitTotal:
+          type: number
+          format: decimal
+          nullable: true
+          description: Sum of debit amounts
+        creditTotal:
+          type: number
+          format: decimal
+          nullable: true
+          description: Sum of credit amounts
+        netChange:
+          type: number
+          format: decimal
+          nullable: true
+          description: Net change (debitTotal - creditTotal)
+
+    journal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 10
+        displayName:
+          type: string
+          maxLength: 100
+          nullable: true
+        templateDisplayName:
+          type: string
+          maxLength: 10
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        balancingAccountId:
+          type: string
+          format: uuid
+          nullable: true
+        balancingAccountNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+
+    journalLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        journalId:
+          type: string
+          format: uuid
+          nullable: true
+        journalDisplayName:
+          type: string
+          nullable: true
+        lineNumber:
+          type: integer
+          format: int32
+          nullable: true
+        accountType:
+          $ref: '#/components/schemas/genJournalAccountType'
+        accountId:
+          type: string
+          format: uuid
+          nullable: true
+        accountNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        documentType:
+          $ref: '#/components/schemas/genJournalDocumentType'
+        postingDate:
+          type: string
+          format: date
+          nullable: true
+        documentDate:
+          type: string
+          format: date
+          nullable: true
+        documentNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        externalDocumentNumber:
+          type: string
+          maxLength: 35
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+          nullable: true
+        debitAmount:
+          type: number
+          format: decimal
+          nullable: true
+        creditAmount:
+          type: number
+          format: decimal
+          nullable: true
+        currencyCode:
+          type: string
+          maxLength: 10
+          nullable: true
+        currencyFactor:
+          type: number
+          format: decimal
+          nullable: true
+        amountLCY:
+          type: number
+          format: decimal
+          nullable: true
+        description:
+          type: string
+          maxLength: 100
+          nullable: true
+        comment:
+          type: string
+          maxLength: 250
+          nullable: true
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        appliesToDocType:
+          $ref: '#/components/schemas/genJournalDocumentType'
+        appliesToDocNo:
+          type: string
+          maxLength: 20
+          nullable: true
+        sourceCode:
+          type: string
+          maxLength: 10
+          nullable: true
+        reasonCode:
+          type: string
+          maxLength: 10
+          nullable: true
+        vatBusPostingGroup:
+          type: string
+          maxLength: 20
+          nullable: true
+        sourceDocumentURL:
+          type: string
+          maxLength: 2048
+          nullable: true
+        taxCode:
+          type: string
+          nullable: true
+        balanceAccountType:
+          $ref: '#/components/schemas/genJournalAccountType'
+        balancingAccountId:
+          type: string
+          format: uuid
+          nullable: true
+        balancingAccountNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+
+    attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        fileName:
+          type: string
+          maxLength: 250
+          nullable: true
+        byteSize:
+          type: integer
+          format: int32
+          nullable: true
+        attachmentContent:
+          type: string
+          format: byte
+          nullable: true
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        parentType:
+          $ref: '#/components/schemas/attachmentEntityBufferDocumentType'
+
+    dimensionSetLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          maxLength: 20
+        consolidationCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        parentType:
+          $ref: '#/components/schemas/dimensionSetEntryBufferParentType'
+        displayName:
+          type: string
+          maxLength: 30
+          nullable: true
+        valueId:
+          type: string
+          format: uuid
+          nullable: true
+        valueCode:
+          type: string
+          nullable: true
+        valueConsolidationCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        valueDisplayName:
+          type: string
+          maxLength: 50
+          nullable: true
+
+    # ============= ENUM SCHEMAS =============
+    glAccountCategory:
+      type: string
+      enum:
+        - ' '
+        - Assets
+        - Liabilities
+        - Equity
+        - Income
+        - Cost of Goods Sold
+        - Expense
+
+    glAccountType:
+      type: string
+      enum:
+        - Posting
+        - Heading
+        - Total
+        - Begin-Total
+        - End-Total
+
+    genJournalDocumentType:
+      type: string
+      enum:
+        - ' '
+        - Payment
+        - Invoice
+        - Credit Memo
+        - Finance Charge Memo
+        - Reminder
+        - Refund
+      nullable: true
+
+    genJournalSourceType:
+      type: string
+      enum:
+        - ' '
+        - Customer
+        - Vendor
+        - Bank Account
+        - Fixed Asset
+        - IC Partner
+        - Employee
+      nullable: true
+
+    genJournalAccountType:
+      type: string
+      enum:
+        - G/L Account
+        - Customer
+        - Vendor
+        - Bank Account
+        - Fixed Asset
+        - IC Partner
+        - Employee
+        - Allocation Account
+        - ' '
+      nullable: true
+
+    attachmentEntityBufferDocumentType:
+      type: string
+      enum:
+        - ' '
+        - Journal
+        - Sales Order
+        - Sales Quote
+        - Sales Credit Memo
+        - Sales Invoice
+        - Purchase Invoice
+        - Purchase Order
+        - Employee
+        - Job
+        - Item
+        - Customer
+        - Vendor
+        - Purchase Credit Memo
+        - Customer Statement
+      nullable: true
+
+    dimensionSetEntryBufferParentType:
+      type: string
+      enum:
+        - ' '
+        - Journal Line
+        - Sales Order
+        - Sales Order Line
+        - Sales Quote
+        - Sales Quote Line
+        - Sales Credit Memo
+        - Sales Credit Memo Line
+        - Sales Invoice
+        - Sales Invoice Line
+        - Purchase Invoice
+        - Purchase Invoice Line
+        - General Ledger Entry
+        - Time Registration Entry
+        - Sales Shipment
+        - Sales Shipment Line
+        - Purchase Receipt
+        - Purchase Receipt Line
+        - Purchase Order
+        - Purchase Order Line
+        - Purchase Credit Memo
+        - Purchase Credit Memo Line
+      nullable: true
+
+    # ============= COLLECTION RESPONSE SCHEMAS =============
+    companyCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/company'
+
+    accountCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/account'
+
+    generalLedgerEntryCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/generalLedgerEntry'
+
+    trialBalanceEntryCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/trialBalanceEntry'
+
+    journalCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/journal'
+
+    journalLineCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/journalLine'
+
+    attachmentCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/attachment'
+
+    dimensionSetLineCollectionResponse:
+      type: object
+      properties:
+        '@odata.count':
+          type: integer
+        value:
+          type: array
+          items:
+            $ref: '#/components/schemas/dimensionSetLine'
+
+tags:
+  - name: account
+    description: G/L Account operations
+  - name: generalLedgerEntry
+    description: General Ledger Entry operations
+  - name: trialBalanceEntry
+    description: Trial Balance Entry operations (Page-based API with aggregated data by account and dimension set)
+  - name: journal
+    description: Journal operations
+  - name: journalLine
+    description: Journal Line operations
+  - name: attachment
+    description: Attachment operations
+  - name: dimensionSetLine
+    description: Dimension Set Line operations
